@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Home, Target, CheckSquare, Book, Users } from 'lucide-react';
+import { Home, Target, CheckSquare, Book, Users, Crown } from 'lucide-react';
 
 const Navigation = () => {
   const location = useLocation();
@@ -12,7 +12,8 @@ const Navigation = () => {
     { path: '/assessment', icon: Target, label: 'Assess' },
     { path: '/tracker', icon: CheckSquare, label: 'Track' },
     { path: '/journal', icon: Book, label: 'Journal' },
-    { path: '/community', icon: Users, label: 'Circle' }
+    { path: '/community', icon: Users, label: 'Circle' },
+    { path: '/pricing', icon: Crown, label: 'Premium' }
   ];
 
   return (
@@ -26,7 +27,7 @@ const Navigation = () => {
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
-              className={`flex flex-col items-center py-2 px-3 rounded-xl transition-all duration-200 ${
+              className={`flex flex-col items-center py-2 px-2 rounded-xl transition-all duration-200 ${
                 isActive 
                   ? 'text-emerald-600 bg-emerald-50' 
                   : 'text-gray-500 hover:text-gray-700'

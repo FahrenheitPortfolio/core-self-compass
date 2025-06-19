@@ -6,6 +6,7 @@ import Assessment from '../components/Assessment';
 import NeedsTracker from '../components/NeedsTracker';
 import MoodJournal from '../components/MoodJournal';
 import Community from '../components/Community';
+import Pricing from '../components/Pricing';
 import Navigation from '../components/Navigation';
 
 const Index = () => {
@@ -18,6 +19,7 @@ const Index = () => {
           <Route path="/tracker" element={<NeedsTracker />} />
           <Route path="/journal" element={<MoodJournal />} />
           <Route path="/community" element={<Community />} />
+          <Route path="/pricing" element={<Pricing />} />
         </Routes>
         <Navigation />
       </div>
