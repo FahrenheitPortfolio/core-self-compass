@@ -1,11 +1,17 @@
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Star, Heart, Sparkles } from 'lucide-react';
+import { Check, Star, Heart, Sparkles, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useAuth } from '@/contexts/AuthContext';
+import { useSubscriptionFeatures } from '@/hooks/useSubscriptionFeatures';
+import PayPalButton, { usePayPalSubscription } from '@/components/subscription/PayPalIntegration';
 
 const Pricing = () => {
   const navigate = useNavigate();
+  const { user, subscription } = useAuth();
+  const { currentPlan } = useSubscriptionFeatures();
+  const { handlePayPalSuccess } = usePayPalSubscription();
 
   const plans = [
     {
@@ -21,7 +27,8 @@ const Pricing = () => {
       ],
       icon: Heart,
       color: "emerald",
-      popular: false
+      popular: false,
+      planId: null
     },
     {
       name: "Premium",
@@ -38,7 +45,8 @@ const Pricing = () => {
       ],
       icon: Star,
       color: "purple",
-      popular: true
+      popular: true,
+      planId: "P-1234567890" // Replace with actual PayPal plan ID
     },
     {
       name: "Pro",
@@ -55,15 +63,40 @@ const Pricing = () => {
       ],
       icon: Sparkles,
       color: "rose",
-      popular: false
+      popular: false,
+      planId: "P-0987654321" // Replace with actual PayPal plan ID
     }
   ];
 
-  const handleSubscribe = (planName: string) => {
-    // This would integrate with payment processing
-    console.log(`Subscribe to ${planName} plan`);
-    // For now, just show a toast or modal
-    alert(`${planName} subscription coming soon! 🌱`);
+  const handleSubscribe = (planName: string, planId: string | null) => {
+    if (!user) {
+      navigate('/auth');
+      return;
+    }
+
+    if (planName === 'Basic') {
+      // Basic plan is already active for all users
+      navigate('/');
+      return;
+    }
+
+    // PayPal integration will handle the subscription
+    if (planId) {
+      console.log(`Initiating PayPal subscription for ${planName}`);
+    }
+  };
+
+  const getCurrentPlanBadge = (planName: string) => {
+    if (currentPlan === planName.toLowerCase()) {
+      return (
+        <div className="absolute top-3 right-3">
+          <div className="bg-green-500 text-white px-2 py-1 rounded-full text-xs font-medium">
+            Current Plan
+          </div>
+        </div>
+      );
+    }
+    return null;
   };
 
   return (
@@ -77,8 +110,16 @@ const Pricing = () => {
           >
             ← Back to Home
           </button>
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">Choose Your Path</h1>
+          <div className="flex items-center space-x-3 mb-4">
+            <Crown className="w-8 h-8 text-emerald-600" />
+            <h1 className="text-2xl font-bold text-gray-800">Choose Your Path</h1>
+          </div>
           <p className="text-gray-600">Invest in your wholeness and unlock your potential</p>
+          {user && subscription && (
+            <p className="text-sm text-emerald-600 font-medium mt-2">
+              Current Plan: {subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1)}
+            </p>
+          )}
         </div>
 
         {/* Pricing Cards */}
@@ -86,6 +127,7 @@ const Pricing = () => {
           {plans.map((plan) => {
             const Icon = plan.icon;
             const isPopular = plan.popular;
+            const isCurrentPlan = currentPlan === plan.name.toLowerCase();
             
             return (
               <div 
@@ -93,6 +135,8 @@ const Pricing = () => {
                 className={`relative rounded-2xl p-6 border-2 transition-all duration-200 ${
                   isPopular 
                     ? 'border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 shadow-lg' 
+                    : isCurrentPlan
+                    ? 'border-green-200 bg-gradient-to-br from-green-50 to-emerald-50 shadow-lg'
                     : 'border-gray-200 bg-white/60'
                 }`}
               >
@@ -103,6 +147,8 @@ const Pricing = () => {
                     </div>
                   </div>
                 )}
+
+                {getCurrentPlanBadge(plan.name)}
 
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">
@@ -127,18 +173,42 @@ const Pricing = () => {
                   ))}
                 </ul>
 
-                <Button 
-                  onClick={() => handleSubscribe(plan.name)}
-                  className={`w-full ${
-                    isPopular
-                      ? 'bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600'
-                      : plan.name === 'Basic'
-                      ? 'bg-emerald-500 hover:bg-emerald-600'
-                      : 'bg-gray-800 hover:bg-gray-900'
-                  } text-white font-medium py-3 rounded-xl transition-all duration-200`}
-                >
-                  {plan.name === 'Basic' ? 'Get Started Free' : `Choose ${plan.name}`}
-                </Button>
+                {plan.name === 'Basic' ? (
+                  <Button 
+                    onClick={() => handleSubscribe(plan.name, plan.planId)}
+                    className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-medium py-3 rounded-xl transition-all duration-200"
+                    disabled={isCurrentPlan}
+                  >
+                    {isCurrentPlan ? 'Current Plan' : 'Get Started Free'}
+                  </Button>
+                ) : plan.planId ? (
+                  isCurrentPlan ? (
+                    <Button 
+                      className="w-full bg-green-500 text-white font-medium py-3 rounded-xl cursor-not-allowed"
+                      disabled
+                    >
+                      Current Plan
+                    </Button>
+                  ) : (
+                    <div className="w-full">
+                      <PayPalButton
+                        planId={plan.planId}
+                        planName={plan.name}
+                        amount={plan.name === 'Premium' ? '9.99' : '19.99'}
+                        onSuccess={(subscriptionId) => 
+                          handlePayPalSuccess(subscriptionId, plan.name.toLowerCase() as 'premium' | 'pro')
+                        }
+                      />
+                    </div>
+                  )
+                ) : (
+                  <Button 
+                    onClick={() => handleSubscribe(plan.name, plan.planId)}
+                    className="w-full bg-gray-800 hover:bg-gray-900 text-white font-medium py-3 rounded-xl transition-all duration-200"
+                  >
+                    Choose {plan.name}
+                  </Button>
+                )}
               </div>
             );
           })}
@@ -151,7 +221,10 @@ const Pricing = () => {
               ✨ 7-day free trial for all paid plans
             </p>
             <p className="text-sm text-gray-600">
-              🌱 Cancel anytime, keep your growth
+              🌱 Cancel anytime through PayPal
+            </p>
+            <p className="text-sm text-gray-500">
+              💳 Secure payments powered by PayPal
             </p>
           </div>
         </div>
