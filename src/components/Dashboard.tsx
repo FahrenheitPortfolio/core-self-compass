@@ -4,14 +4,25 @@ import { Heart, Leaf, Brain, Users, Sparkles, Mountain, Crown, Settings, LogOut 
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscriptionFeatures } from '@/hooks/useSubscriptionFeatures';
+import WellnessAd from './WellnessAd';
+import MoodTrends from './MoodTrends';
+import { useDarkMode } from '@/hooks/useDarkMode';
+import { useNotifications } from '@/hooks/useNotifications';
+import AnimatedCard from './ui/AnimatedCard';
+import GradientButton from './ui/GradientButton';
+import ProgressRing from './ui/ProgressRing';
 import { supabase } from '@/integrations/supabase/client';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const { user, profile, subscription, signOut } = useAuth();
-  const { features, currentPlan } = useSubscriptionFeatures();
+  const { features, showAds, currentPlan, isInFreeTrial } = useSubscriptionFeatures();
+  const { isDark, toggle: toggleDarkMode } = useDarkMode();
+  const { requestPermission, scheduleDailyReminder } = useNotifications();
   const [recentAssessment, setRecentAssessment] = useState<any>(null);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  
+  console.log('📊 Dashboard rendered for user:', user?.email, 'Plan:', currentPlan);
   
   const needCategories = [
     { 
@@ -73,6 +84,7 @@ const Dashboard = () => {
   const fetchRecentAssessment = async () => {
     if (!user) return;
 
+    console.log('📈 Fetching recent assessment for user:', user.email);
     try {
       const { data, error } = await supabase
         .from('needs_assessments')
@@ -83,26 +95,29 @@ const Dashboard = () => {
         .single();
 
       if (data) {
+        console.log('✅ Assessment data loaded:', Object.keys(data));
         setRecentAssessment(data);
+      } else {
+        console.log('📄 No assessment data found');
       }
     } catch (error) {
-      console.error('Error fetching assessment:', error);
+      console.error('❌ Error fetching assessment:', error);
     }
   };
 
   const handleSignOut = async () => {
+    console.log('🚪 User signing out');
     await signOut();
     navigate('/auth');
   };
 
   const getPlanBadge = () => {
-    switch (currentPlan) {
-      case 'premium':
-        return <span className="px-2 py-1 bg-purple-100 text-purple-600 text-xs rounded-full font-medium">Premium</span>;
-      case 'pro':
-        return <span className="px-2 py-1 bg-rose-100 text-rose-600 text-xs rounded-full font-medium">Pro</span>;
-      default:
-        return <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full font-medium">Basic</span>;
+    if (currentPlan === 'ad_free') {
+      return <span className="px-2 py-1 bg-green-100 text-green-600 text-xs rounded-full font-medium">Ad-Free</span>;
+    } else if (isInFreeTrial) {
+      return <span className="px-2 py-1 bg-purple-100 text-purple-600 text-xs rounded-full font-medium">Free Trial</span>;
+    } else {
+      return <span className="px-2 py-1 bg-blue-100 text-blue-600 text-xs rounded-full font-medium">Free</span>;
     }
   };
 
@@ -148,6 +163,13 @@ const Dashboard = () => {
                 <span>Subscription</span>
               </button>
               <button
+                onClick={toggleDarkMode}
+                className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center space-x-2"
+              >
+                <Settings className="w-4 h-4" />
+                <span>{isDark ? 'Light Mode' : 'Dark Mode'}</span>
+              </button>
+              <button
                 onClick={handleSignOut}
                 className="w-full px-4 py-2 text-left hover:bg-gray-50 flex items-center space-x-2 text-red-600"
               >
@@ -164,62 +186,59 @@ const Dashboard = () => {
         <p className="text-sm text-gray-500 mt-1">How are you nurturing yourself today?</p>
       </div>
 
-      {/* Upgrade Banner */}
-      {currentPlan === 'basic' && (
-        <div className="bg-gradient-to-r from-purple-400 to-pink-500 rounded-2xl p-4 mb-6 text-white shadow-lg">
-          <div className="flex items-center space-x-3">
-            <Crown className="w-6 h-6" />
-            <div className="flex-1">
-              <h3 className="font-semibold">Unlock Your Full Potential</h3>
-              <p className="text-sm opacity-90">Upgrade to Premium for advanced analytics & community features</p>
-            </div>
-            <button
-              onClick={() => navigate('/pricing')}
-              className="bg-white/20 hover:bg-white/30 px-4 py-2 rounded-xl font-medium transition-all"
-            >
-              Upgrade
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Google Ad */}
+      {showAds && <WellnessAd position="inline" />}
 
-      <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 mb-6 shadow-lg">
-        <h2 className="text-lg font-semibold text-gray-800 mb-3">Today's Intention</h2>
-        <p className="text-gray-600 italic">"I choose to nurture my whole self with love and compassion"</p>
-        <button 
-          onClick={() => navigate('/assessment')}
-          className="mt-3 text-sm text-emerald-600 font-medium hover:text-emerald-700 transition-colors"
-        >
-          Take assessment →
-        </button>
-      </div>
+      <AnimatedCard className="p-6 mb-6" delay={100}>
+        <div className="text-center">
+          <div className="w-16 h-16 bg-gradient-to-br from-emerald-400 to-blue-500 rounded-full mx-auto mb-4 flex items-center justify-center animate-pulse-soft">
+            <Sparkles className="w-8 h-8 text-white" />
+          </div>
+          <h2 className="text-lg font-semibold text-gray-800 mb-3">Today's Intention</h2>
+          <p className="text-gray-600 italic mb-4">"I choose to nurture my whole self with love and compassion"</p>
+          <GradientButton 
+            onClick={() => navigate('/assessment')}
+            size="sm"
+            variant="primary"
+          >
+            Take Assessment
+          </GradientButton>
+        </div>
+      </AnimatedCard>
 
       <div className="grid grid-cols-2 gap-4 mb-6">
-        {needCategories.map((category) => {
+        {needCategories.map((category, index) => {
           const Icon = category.icon;
           const progress = (category.score / category.total) * 100;
           
           return (
-            <div key={category.id} className="bg-white/60 backdrop-blur-sm rounded-2xl p-4 shadow-lg">
-              <div className={`w-12 h-12 bg-gradient-to-br ${category.color} rounded-xl flex items-center justify-center mb-3`}>
-                <Icon className="w-6 h-6 text-white" />
+            <AnimatedCard key={category.id} className="p-4" delay={200 + index * 50} hover={true}>
+              <div className="text-center">
+                <ProgressRing 
+                  progress={progress} 
+                  size={80} 
+                  strokeWidth={6}
+                  color={category.color.includes('red') ? '#ef4444' : 
+                         category.color.includes('green') ? '#10b981' :
+                         category.color.includes('blue') ? '#3b82f6' :
+                         category.color.includes('purple') ? '#8b5cf6' :
+                         category.color.includes('amber') ? '#f59e0b' : '#06b6d4'}
+                >
+                  <div className="text-center">
+                    <Icon className="w-6 h-6 mx-auto mb-1 text-gray-600" />
+                    <p className="text-xs font-bold text-gray-800">{category.score}/{category.total}</p>
+                  </div>
+                </ProgressRing>
+                <h3 className="font-semibold text-gray-800 mt-3 text-sm">{category.name}</h3>
               </div>
-              <h3 className="font-semibold text-gray-800 mb-1">{category.name}</h3>
-              <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
-                <div 
-                  className={`bg-gradient-to-r ${category.color} h-2 rounded-full transition-all duration-500`}
-                  style={{ width: `${progress}%` }}
-                ></div>
-              </div>
-              <p className="text-xs text-gray-600">{category.score}/{category.total}</p>
-            </div>
+            </AnimatedCard>
           );
         })}
       </div>
 
-      <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg">
+      <AnimatedCard className="p-6" delay={600}>
         <h2 className="text-lg font-semibold text-gray-800 mb-4">
-          {features.personalizedRituals ? 'Personalized Suggestions' : 'Gentle Suggestions'}
+          Personalized Suggestions
         </h2>
         <div className="space-y-3">
           {needCategories.slice(0, 3).map((category, index) => (
@@ -229,10 +248,7 @@ const Dashboard = () => {
               </div>
               <div className="flex-1">
                 <p className="text-sm text-gray-700">
-                  {features.personalizedRituals 
-                    ? `Personalized ${category.name.toLowerCase()} practice based on your progress`
-                    : `Take 5 minutes for ${category.name.toLowerCase()} self-care`
-                  }
+                  Personalized ${category.name.toLowerCase()} practice based on your progress
                 </p>
                 <span className="text-xs text-gray-500">{category.name}</span>
               </div>
@@ -240,14 +256,17 @@ const Dashboard = () => {
           ))}
         </div>
         
-        {features.personalizedRituals && (
-          <div className="mt-4 p-3 bg-purple-50 rounded-xl">
-            <p className="text-sm text-purple-700 font-medium">
-              ✨ AI-powered suggestions based on your assessment patterns
-            </p>
-          </div>
-        )}
-      </div>
+        <div className="mt-4 p-3 bg-purple-50 rounded-xl">
+          <p className="text-sm text-purple-700 font-medium">
+            ✨ AI-powered suggestions based on your assessment patterns
+          </p>
+        </div>
+        
+        {/* Mood Trends */}
+        <div className="mt-6">
+          <MoodTrends />
+        </div>
+      </AnimatedCard>
     </div>
   );
 };

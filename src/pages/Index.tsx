@@ -11,8 +11,19 @@ import EnhancedCommunity from '../components/features/EnhancedCommunity';
 import Pricing from '../components/Pricing';
 import Navigation from '../components/Navigation';
 import AuthPage from '../components/auth/AuthPage';
+import PrivacyPolicy from '../components/PrivacyPolicy';
+import TestChecklist from '../components/TestChecklist';
+import TestSubscription from '../components/TestSubscription';
+import Onboarding from '../components/Onboarding';
+import TraumaSupport from '../components/recovery/TraumaSupport';
+import SymptomTracker from '../components/recovery/SymptomTracker';
+import StressMonitor from '../components/recovery/StressMonitor';
 
 const Index = () => {
+  console.log('🏠 Index page loaded');
+  
+  const isOnboardingCompleted = localStorage.getItem('onboarding_completed');
+  
   return (
     <AuthProvider>
       <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-blue-50 to-purple-50">
@@ -20,14 +31,38 @@ const Index = () => {
           <Routes>
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/pricing" element={<Pricing />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/test" element={<TestChecklist />} />
+            <Route path="/test-sub" element={<TestSubscription />} />
+            <Route path="/onboarding" element={<Onboarding />} />
+            <Route path="/trauma-support" element={
+              <ProtectedRoute>
+                <TraumaSupport />
+                <Navigation />
+              </ProtectedRoute>
+            } />
+            <Route path="/symptoms" element={
+              <ProtectedRoute>
+                <SymptomTracker />
+                <Navigation />
+              </ProtectedRoute>
+            } />
+            <Route path="/stress" element={
+              <ProtectedRoute>
+                <StressMonitor />
+                <Navigation />
+              </ProtectedRoute>
+            } />
             <Route path="/" element={
               <ProtectedRoute>
+                {console.log('📊 Loading Dashboard')}
                 <Dashboard />
                 <Navigation />
               </ProtectedRoute>
             } />
             <Route path="/assessment" element={
               <ProtectedRoute>
+                {console.log('📋 Loading Assessment')}
                 <EnhancedAssessment />
                 <Navigation />
               </ProtectedRoute>

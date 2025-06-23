@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Check, Star, Heart, Sparkles, Crown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -13,58 +13,42 @@ const Pricing = () => {
   const { currentPlan } = useSubscriptionFeatures();
   const { handlePayPalSuccess } = usePayPalSubscription();
 
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
+  
   const plans = [
     {
-      name: "Basic",
-      price: "Free",
-      description: "Start your journey to wholeness",
+      name: "Free",
+      price: "$0",
+      description: "All features with ads",
       features: [
-        "Daily needs assessment",
-        "Basic mood tracking",
-        "3 guided meditations",
-        "Personal reflection prompts",
-        "Community circle (read-only)"
+        "Complete wellness assessment",
+        "Advanced mood & energy tracking",
+        "AI-powered insights & patterns",
+        "Personalized suggestions",
+        "Community access & sharing",
+        "Data export & analytics",
+        "Includes ads"
       ],
       icon: Heart,
-      color: "emerald",
+      color: "blue",
       popular: false,
       planId: null
     },
     {
-      name: "Premium",
-      price: "$9.99/month",
-      description: "Deepen your self-care practice",
+      name: "Ad-Free",
+      price: billingCycle === 'monthly' ? "$7/month" : "$60/year",
+      description: billingCycle === 'monthly' ? "Support WholeMe & remove ads" : "Save $24/year & remove ads",
       features: [
-        "Everything in Basic",
-        "Advanced needs analytics",
-        "Unlimited guided content",
-        "Personalized rituals & suggestions",
-        "Mood pattern insights",
-        "Community participation",
-        "Weekly progress reports"
+        "All features (same as free)",
+        "No ads",
+        "Support app development",
+        billingCycle === 'monthly' ? "Monthly subscription" : "Annual subscription (save $24)",
+        "Feel good about supporting wellness"
       ],
-      icon: Star,
-      color: "purple",
-      popular: true,
-      planId: "P-1234567890" // Replace with actual PayPal plan ID
-    },
-    {
-      name: "Pro",
-      price: "$19.99/month",
-      description: "Transform your life completely",
-      features: [
-        "Everything in Premium",
-        "1-on-1 coaching sessions",
-        "Custom meditation recordings",
-        "Advanced habit tracking",
-        "Priority community features",
-        "Export your data",
-        "Early access to new features"
-      ],
-      icon: Sparkles,
-      color: "rose",
+      icon: Crown,
+      color: "green",
       popular: false,
-      planId: "P-0987654321" // Replace with actual PayPal plan ID
+      planId: billingCycle === 'monthly' ? "P-AD-FREE-MONTHLY" : "P-AD-FREE-ANNUAL"
     }
   ];
 
@@ -104,6 +88,30 @@ const Pricing = () => {
       <div className="max-w-md mx-auto bg-white/80 backdrop-blur-sm min-h-screen">
         {/* Header */}
         <div className="px-6 pt-8 pb-6">
+          {/* Billing Toggle */}
+          <div className="flex justify-center mb-6">
+            <div className="bg-gray-100 rounded-xl p-1 flex">
+              <button
+                onClick={() => setBillingCycle('monthly')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  billingCycle === 'monthly' ? 'bg-white text-gray-800 shadow' : 'text-gray-600'
+                }`}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setBillingCycle('annual')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors relative ${
+                  billingCycle === 'annual' ? 'bg-white text-gray-800 shadow' : 'text-gray-600'
+                }`}
+              >
+                Annual
+                <span className="absolute -top-2 -right-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
+                  Save $24
+                </span>
+              </button>
+            </div>
+          </div>
           <button 
             onClick={() => navigate('/')}
             className="text-emerald-600 mb-4"
@@ -112,9 +120,9 @@ const Pricing = () => {
           </button>
           <div className="flex items-center space-x-3 mb-4">
             <Crown className="w-8 h-8 text-emerald-600" />
-            <h1 className="text-2xl font-bold text-gray-800">Choose Your Path</h1>
+            <h1 className="text-2xl font-bold text-gray-800">Remove Ads Forever</h1>
           </div>
-          <p className="text-gray-600">Invest in your wholeness and unlock your potential</p>
+          <p className="text-gray-600">All features are free! Just $7/month to remove ads & support WholeMe</p>
           {user && subscription && (
             <p className="text-sm text-emerald-600 font-medium mt-2">
               Current Plan: {subscription.plan.charAt(0).toUpperCase() + subscription.plan.slice(1)}
@@ -173,42 +181,30 @@ const Pricing = () => {
                   ))}
                 </ul>
 
-                {plan.name === 'Basic' ? (
+                {isCurrentPlan ? (
                   <Button 
-                    onClick={() => handleSubscribe(plan.name, plan.planId)}
-                    className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-medium py-3 rounded-xl transition-all duration-200"
-                    disabled={isCurrentPlan}
+                    className="w-full bg-green-500 text-white font-medium py-3 rounded-xl cursor-not-allowed"
+                    disabled
                   >
-                    {isCurrentPlan ? 'Current Plan' : 'Get Started Free'}
+                    Current Plan
+                  </Button>
+                ) : plan.name === 'Free' ? (
+                  <Button 
+                    onClick={() => navigate('/')}
+                    className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-medium py-3 rounded-xl transition-all duration-200"
+                  >
+                    Get Started Free
                   </Button>
                 ) : plan.planId ? (
-                  isCurrentPlan ? (
-                    <Button 
-                      className="w-full bg-green-500 text-white font-medium py-3 rounded-xl cursor-not-allowed"
-                      disabled
-                    >
-                      Current Plan
-                    </Button>
-                  ) : (
-                    <div className="w-full">
-                      <PayPalButton
-                        planId={plan.planId}
-                        planName={plan.name}
-                        amount={plan.name === 'Premium' ? '9.99' : '19.99'}
-                        onSuccess={(subscriptionId) => 
-                          handlePayPalSuccess(subscriptionId, plan.name.toLowerCase() as 'premium' | 'pro')
-                        }
-                      />
-                    </div>
-                  )
-                ) : (
-                  <Button 
-                    onClick={() => handleSubscribe(plan.name, plan.planId)}
-                    className="w-full bg-gray-800 hover:bg-gray-900 text-white font-medium py-3 rounded-xl transition-all duration-200"
-                  >
-                    Choose {plan.name}
-                  </Button>
-                )}
+                  <PayPalButton
+                    planId={plan.planId}
+                    planName={plan.name}
+                    amount={billingCycle === 'monthly' ? '7.00' : '60.00'}
+                    onSuccess={(subscriptionId) => 
+                      handlePayPalSuccess(subscriptionId, 'ad_free')
+                    }
+                  />
+                ) : null}
               </div>
             );
           })}
@@ -218,10 +214,10 @@ const Pricing = () => {
         <div className="px-6 pt-8 pb-6">
           <div className="text-center space-y-2">
             <p className="text-sm text-gray-600">
-              ✨ 7-day free trial for all paid plans
+              ✨ Monthly subscription, cancel anytime
             </p>
             <p className="text-sm text-gray-600">
-              🌱 Cancel anytime through PayPal
+              🌱 Support independent app development
             </p>
             <p className="text-sm text-gray-500">
               💳 Secure payments powered by PayPal

@@ -1,22 +1,37 @@
 
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Edit3, Heart, TrendingUp, Calendar } from 'lucide-react';
+import { ArrowLeft, Edit3, Heart, TrendingUp, Calendar, Activity } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSubscriptionFeatures } from '@/hooks/useSubscriptionFeatures';
+import WellnessAd from '../WellnessAd';
+import VoiceJournal from '../VoiceJournal';
+import { moodEntrySchema, sanitizeInput } from '@/utils/validation';
+import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 const EnhancedMoodJournal = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { features } = useSubscriptionFeatures();
+  const { features, showAds } = useSubscriptionFeatures();
   const [selectedMood, setSelectedMood] = useState(5);
   const [energyLevel, setEnergyLevel] = useState(5);
   const [stressLevel, setStressLevel] = useState(5);
   const [journalEntry, setJournalEntry] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [recentEntries, setRecentEntries] = useState<any[]>([]);
+  const [activityLog, setActivityLog] = useState<{id: number, message: string, time: string, type: 'info' | 'success' | 'error'}[]>([]);
+
+  const addActivity = (message: string, type: 'info' | 'success' | 'error' = 'info') => {
+    const newActivity = {
+      id: Date.now(),
+      message,
+      time: new Date().toLocaleTimeString(),
+      type
+    };
+    setActivityLog(prev => [newActivity, ...prev.slice(0, 4)]);
+  };
 
   const moods = [
     { value: 1, emoji: '😢', label: 'Very Sad' },
@@ -35,10 +50,8 @@ const EnhancedMoodJournal = () => {
   ];
 
   useEffect(() => {
-    if (features.moodPatternInsights) {
-      fetchRecentEntries();
-    }
-  }, [features.moodPatternInsights]);
+    fetchRecentEntries();
+  }, [user]);
 
   const fetchRecentEntries = async () => {
     if (!user) return;
@@ -67,8 +80,26 @@ const EnhancedMoodJournal = () => {
   };
 
   const saveMoodEntry = async () => {
-    if (!user || !journalEntry.trim()) {
-      toast.error('Please write something in your journal entry');
+    if (!user) {
+      toast.error('Please sign in to save entries');
+      return;
+    }
+
+    // Validate and sanitize input
+    try {
+      const sanitizedEntry = sanitizeInput(journalEntry);
+      const validatedData = moodEntrySchema.parse({
+        mood_rating: selectedMood,
+        energy_level: energyLevel,
+        stress_level: stressLevel,
+        notes: sanitizedEntry,
+        tags: selectedTags,
+      });
+
+      addActivity(`Saving entry: Mood ${validatedData.mood_rating}/8, ${validatedData.notes.length} chars`, 'info');
+    } catch (error) {
+      addActivity('Entry validation failed - invalid data', 'error');
+      toast.error('Please check your entry and try again');
       return;
     }
 
@@ -80,19 +111,19 @@ const EnhancedMoodJournal = () => {
           mood_rating: selectedMood,
           energy_level: energyLevel,
           stress_level: stressLevel,
-          notes: journalEntry,
+          notes: sanitizeInput(journalEntry),
           tags: selectedTags,
         });
 
       if (error) throw error;
 
+      addActivity('Journal entry saved successfully!', 'success');
       toast.success('Mood entry saved successfully!');
       setJournalEntry('');
       setSelectedTags([]);
-      if (features.moodPatternInsights) {
-        fetchRecentEntries();
-      }
+      fetchRecentEntries();
     } catch (error) {
+      addActivity(`Save failed: ${error.message}`, 'error');
       console.error('Error saving mood entry:', error);
       toast.error('Error saving mood entry');
     }
@@ -208,6 +239,33 @@ const EnhancedMoodJournal = () => {
         </div>
       )}
 
+      {/* Activity Log */}
+      {activityLog.length > 0 && (
+        <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-4 mb-6 shadow-lg">
+          <div className="flex items-center space-x-2 mb-3">
+            <Activity className="w-4 h-4 text-gray-600" />
+            <h3 className="font-medium text-gray-800">Recent Activity</h3>
+          </div>
+          <div className="space-y-2">
+            {activityLog.map((activity) => (
+              <div key={activity.id} className="flex items-start space-x-3 p-2 rounded-lg bg-white/40">
+                <div className={`w-2 h-2 rounded-full mt-2 flex-shrink-0 ${
+                  activity.type === 'success' ? 'bg-green-400' :
+                  activity.type === 'error' ? 'bg-red-400' : 'bg-blue-400'
+                }`} />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-gray-700">{activity.message}</p>
+                  <p className="text-xs text-gray-500">{activity.time}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Voice Journal */}
+      <VoiceJournal onTranscript={(text) => setJournalEntry(prev => prev + ' ' + text)} />
+      
       {/* Journal Entry */}
       <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg mb-6">
         <div className="flex items-center space-x-2 mb-4">
@@ -235,42 +293,46 @@ const EnhancedMoodJournal = () => {
         </div>
       </div>
 
-      {/* Recent Entries */}
-      {features.moodPatternInsights && recentEntries.length > 0 && (
+      {/* Journal Entries */}
+      {recentEntries.length > 0 && (
         <div className="bg-white/60 backdrop-blur-sm rounded-2xl p-6 shadow-lg">
           <div className="flex items-center space-x-2 mb-4">
-            <TrendingUp className="w-5 h-5 text-purple-600" />
-            <h3 className="font-semibold text-gray-800">Recent Patterns</h3>
+            <Calendar className="w-5 h-5 text-gray-600" />
+            <h3 className="font-semibold text-gray-800">Your Journal</h3>
           </div>
           <div className="space-y-3">
-            {recentEntries.map((entry) => (
-              <div key={entry.id} className="p-3 bg-white/40 rounded-lg">
-                <div className="flex justify-between items-start mb-2">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-lg">{moods.find(m => m.value === entry.mood_rating)?.emoji}</span>
-                    <span className="text-sm font-medium text-gray-700">
-                      Mood: {entry.mood_rating}/8
+            {recentEntries.map((entry) => {
+              const mood = moods.find(m => m.value === entry.mood_rating);
+              const firstWords = entry.notes.split(' ').slice(0, 8).join(' ');
+              const hasMore = entry.notes.split(' ').length > 8;
+              
+              return (
+                <div key={entry.id} className="p-4 bg-white/40 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-xl">{mood?.emoji}</span>
+                      <span className="text-sm font-medium text-gray-700">{mood?.label}</span>
+                    </div>
+                    <span className="text-xs text-gray-500">
+                      {new Date(entry.created_at).toLocaleDateString()}
                     </span>
                   </div>
-                  <span className="text-xs text-gray-500">
-                    {new Date(entry.created_at).toLocaleDateString()}
-                  </span>
+                  <p className="text-sm text-gray-700 mb-2">
+                    {firstWords}{hasMore && '...'}
+                  </p>
+                  {hasMore && (
+                    <button className="text-xs text-emerald-600 hover:text-emerald-700 font-medium">
+                      Read More
+                    </button>
+                  )}
                 </div>
-                {entry.tags && entry.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mb-2">
-                    {entry.tags.map((tag: string, index: number) => (
-                      <span key={index} className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded-full">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <p className="text-sm text-gray-600 italic truncate">{entry.notes}</p>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
+      {/* Bottom Google Ad */}
+      {showAds && <WellnessAd position="bottom" />}
     </div>
   );
 };

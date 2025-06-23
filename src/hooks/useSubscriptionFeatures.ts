@@ -2,42 +2,43 @@
 import { useAuth } from '@/contexts/AuthContext';
 
 export const useSubscriptionFeatures = () => {
-  const { subscription } = useAuth();
+  const { subscription, user } = useAuth();
+
+  const isAdFree = subscription?.plan === 'ad_free' && subscription?.status === 'active';
+  
+  // Check if user is in free trial (7 days from signup)
+  const isInFreeTrial = user && !subscription ? (() => {
+    const signupDate = new Date(user.created_at);
+    const trialEndDate = new Date(signupDate.getTime() + 7 * 24 * 60 * 60 * 1000);
+    return new Date() < trialEndDate;
+  })() : false;
 
   const features = {
-    // Basic features (free)
+    // All features are now free with ads
     dailyNeedsAssessment: true,
     basicMoodTracking: true,
-    guidedMeditations: subscription?.plan ? 3 : 3,
-    personalReflection: true,
-    communityReadOnly: true,
-
-    // Premium features
-    advancedAnalytics: subscription?.plan === 'premium' || subscription?.plan === 'pro',
-    unlimitedGuidedContent: subscription?.plan === 'premium' || subscription?.plan === 'pro',
-    personalizedRituals: subscription?.plan === 'premium' || subscription?.plan === 'pro',
-    moodPatternInsights: subscription?.plan === 'premium' || subscription?.plan === 'pro',
-    communityParticipation: subscription?.plan === 'premium' || subscription?.plan === 'pro',
-    weeklyReports: subscription?.plan === 'premium' || subscription?.plan === 'pro',
-
-    // Pro features
-    coachingSessions: subscription?.plan === 'pro',
-    customMeditations: subscription?.plan === 'pro',
-    advancedHabitTracking: subscription?.plan === 'pro',
-    priorityCommunity: subscription?.plan === 'pro',
-    dataExport: subscription?.plan === 'pro',
-    earlyAccess: subscription?.plan === 'pro',
+    advancedAnalytics: true,
+    unlimitedGuidedContent: true,
+    personalizedRituals: true,
+    moodPatternInsights: true,
+    communityParticipation: true,
+    weeklyReports: true,
+    coachingSessions: true,
+    customMeditations: true,
+    advancedHabitTracking: true,
+    priorityCommunity: true,
+    dataExport: true,
+    earlyAccess: true,
+    
+    // No ads during trial or if ad-free
+    showAds: !isAdFree && !isInFreeTrial,
   };
-
-  const isPremium = subscription?.plan === 'premium' || subscription?.plan === 'pro';
-  const isPro = subscription?.plan === 'pro';
-  const isBasic = !subscription || subscription?.plan === 'basic';
 
   return {
     features,
-    isPremium,
-    isPro,
-    isBasic,
-    currentPlan: subscription?.plan || 'basic',
+    isAdFree,
+    isInFreeTrial,
+    showAds: !isAdFree && !isInFreeTrial,
+    currentPlan: isAdFree ? 'ad_free' : isInFreeTrial ? 'trial' : 'free',
   };
 };

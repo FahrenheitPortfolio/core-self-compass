@@ -86,6 +86,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log(`🔐 Auth event: ${event}`, session?.user?.email || 'No user');
         setSession(session);
         setUser(session?.user ?? null);
         
@@ -141,13 +142,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const signIn = async (email: string, password: string) => {
+    console.log('🔑 Attempting sign in for:', email);
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
+      console.log('❌ Sign in failed:', error.message);
       toast.error(error.message);
+    } else {
+      console.log('✅ Sign in successful');
     }
 
     return { error };
