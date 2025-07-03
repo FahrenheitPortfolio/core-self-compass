@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -13,7 +12,7 @@ interface Profile {
 
 interface Subscription {
   id: string;
-  plan: 'basic' | 'premium' | 'pro';
+  plan: 'basic' | 'premium' | 'pro' | 'ad_free';
   status: 'active' | 'cancelled' | 'expired' | 'pending';
   paypal_subscription_id?: string;
   expires_at?: string;
@@ -90,7 +89,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       
       console.log('✅ Subscription fetched:', data);
-      setSubscription(data);
+      // Cast the data to match our interface type
+      const subscriptionData: Subscription = {
+        ...data,
+        plan: data.plan as 'basic' | 'premium' | 'pro' | 'ad_free'
+      };
+      setSubscription(subscriptionData);
     } catch (error) {
       console.error('Error fetching subscription:', error);
     }

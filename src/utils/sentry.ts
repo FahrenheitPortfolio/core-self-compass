@@ -1,5 +1,8 @@
+
 import * as Sentry from '@sentry/react';
-import { BrowserTracing } from '@sentry/tracing';
+import React from 'react';
+import { useLocation, useNavigationType } from 'react-router-dom';
+import { createRoutesFromChildren, matchRoutes } from 'react-router-dom';
 
 export const initSentry = () => {
   const dsn = import.meta.env.VITE_SENTRY_DSN;
@@ -14,7 +17,7 @@ export const initSentry = () => {
     dsn,
     environment,
     integrations: [
-      new BrowserTracing({
+      Sentry.browserTracingIntegration({
         routingInstrumentation: Sentry.reactRouterV6Instrumentation(
           React.useEffect,
           useLocation,
@@ -27,9 +30,10 @@ export const initSentry = () => {
     tracesSampleRate: environment === 'production' ? 0.1 : 1.0,
     beforeSend(event) {
       // Filter out sensitive data
-      if (event.request?.data) {
-        delete event.request.data.password;
-        delete event.request.data.email;
+      if (event.request?.data && typeof event.request.data === 'object') {
+        const data = event.request.data as any;
+        if ('password' in data) delete data.password;
+        if ('email' in data) delete data.email;
       }
       return event;
     },

@@ -1,6 +1,12 @@
+
 declare global {
   interface Window {
-    adsbygoogle: any[];
+    gtag?: (
+      command: 'config' | 'event' | 'consent',
+      targetId: string,
+      config?: Record<string, any>
+    ) => void;
+    adsbygoogle?: any[];
   }
 }
 

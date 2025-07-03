@@ -55,14 +55,12 @@ const Index = () => {
             } />
             <Route path="/" element={
               <ProtectedRoute>
-                {console.log('📊 Loading Dashboard')}
                 <Dashboard />
                 <Navigation />
               </ProtectedRoute>
             } />
             <Route path="/assessment" element={
               <ProtectedRoute>
-                {console.log('📋 Loading Assessment')}
                 <EnhancedAssessment />
                 <Navigation />
               </ProtectedRoute>
