@@ -92,7 +92,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Cast the data to match our interface type
       const subscriptionData: Subscription = {
         ...data,
-        plan: data.plan as 'basic' | 'premium' | 'pro' | 'ad_free'
+        plan: data.plan as 'basic' | 'premium' | 'pro' | 'ad_free',
+        status: data.status as 'active' | 'cancelled' | 'expired' | 'pending'
       };
       setSubscription(subscriptionData);
     } catch (error) {

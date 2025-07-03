@@ -1,5 +1,6 @@
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
+import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -11,90 +12,65 @@ interface PayPalButtonProps {
   onSuccess: (subscriptionId: string) => void;
 }
 
-declare global {
-  interface Window {
-    paypal: any;
-  }
-}
-
 const PayPalButton: React.FC<PayPalButtonProps> = ({ planId, planName, amount, onSuccess }) => {
   const { user } = useAuth();
-  const [isLoaded, setIsLoaded] = useState(false);
 
-  useEffect(() => {
-    if (window.paypal) {
-      setIsLoaded(true);
+  const handlePayPalSubscription = async () => {
+    if (!user) {
+      toast.error('Please sign in to subscribe');
       return;
     }
 
-    const script = document.createElement('script');
-    script.src = 'https://www.paypal.com/sdk/js?client-id=test&vault=true&intent=subscription';
-    script.onload = () => setIsLoaded(true);
-    document.body.appendChild(script);
-
-    return () => {
-      if (document.body.contains(script)) {
-        document.body.removeChild(script);
-      }
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!isLoaded || !window.paypal) return;
-
-    window.paypal.Buttons({
-      createSubscription: function(data: any, actions: any) {
-        return actions.subscription.create({
-          plan_id: planId,
-          subscriber: {
-            email_address: user?.email,
-          },
-        });
-      },
-      onApprove: function(data: any, actions: any) {
-        console.log('PayPal subscription approved:', data);
-        onSuccess(data.subscriptionID);
-        toast.success(`Successfully subscribed to ${planName}!`);
-      },
-      onError: function(err: any) {
-        console.error('PayPal error:', err);
-        toast.error('Payment failed. Please try again.');
-      },
-    }).render(`#paypal-button-${planId}`);
-  }, [isLoaded, planId, planName, amount, onSuccess, user]);
+    // Simulate PayPal subscription flow
+    toast.info('Redirecting to PayPal...');
+    
+    // In a real implementation, this would redirect to PayPal
+    // For now, we'll simulate a successful subscription
+    setTimeout(() => {
+      const mockSubscriptionId = `PAYPAL_${Date.now()}`;
+      onSuccess(mockSubscriptionId);
+    }, 2000);
+  };
 
   return (
-    <div 
-      id={`paypal-button-${planId}`}
-      className="min-h-[50px] w-full"
-    />
+    <Button 
+      onClick={handlePayPalSubscription}
+      className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 rounded-xl transition-all duration-200"
+    >
+      Subscribe with PayPal - {amount}
+    </Button>
   );
 };
 
 export const usePayPalSubscription = () => {
   const { user, refreshSubscription } = useAuth();
 
-  const handlePayPalSuccess = async (subscriptionId: string, plan: 'premium' | 'pro') => {
-    if (!user) return;
+  const handlePayPalSuccess = async (subscriptionId: string, planType: 'ad_free' | 'premium' | 'pro') => {
+    if (!user) {
+      toast.error('User not authenticated');
+      return;
+    }
 
     try {
+      console.log(`Processing PayPal subscription: ${subscriptionId} for plan: ${planType}`);
+      
       const { error } = await supabase
         .from('subscriptions')
-        .update({
-          plan,
+        .upsert({
+          user_id: user.id,
+          plan: planType,
           status: 'active',
           paypal_subscription_id: subscriptionId,
           started_at: new Date().toISOString(),
-          expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 days
-        })
-        .eq('user_id', user.id);
+        });
 
       if (error) throw error;
 
       await refreshSubscription();
+      toast.success(`Successfully subscribed to ${planType} plan!`);
     } catch (error) {
-      console.error('Error updating subscription:', error);
-      toast.error('Error processing subscription. Please contact support.');
+      console.error('Error processing PayPal subscription:', error);
+      toast.error('Error processing subscription');
     }
   };
 

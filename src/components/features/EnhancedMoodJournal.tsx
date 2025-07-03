@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Edit3, Heart, TrendingUp, Calendar, Activity } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -9,7 +8,6 @@ import VoiceJournal from '../VoiceJournal';
 import { moodEntrySchema, sanitizeInput } from '@/utils/validation';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
 
 const EnhancedMoodJournal = () => {
   const navigate = useNavigate();
