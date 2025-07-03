@@ -9,7 +9,197 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      community_hearts: {
+        Row: {
+          created_at: string | null
+          id: string
+          post_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          post_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          post_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_hearts_post_id_fkey"
+            columns: ["post_id"]
+            isOneToOne: false
+            referencedRelation: "community_posts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_posts: {
+        Row: {
+          author_name: string
+          content: string
+          created_at: string | null
+          hearts_count: number | null
+          id: string
+          need_category: string
+          user_id: string
+        }
+        Insert: {
+          author_name: string
+          content: string
+          created_at?: string | null
+          hearts_count?: number | null
+          id?: string
+          need_category: string
+          user_id: string
+        }
+        Update: {
+          author_name?: string
+          content?: string
+          created_at?: string | null
+          hearts_count?: number | null
+          id?: string
+          need_category?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      mood_entries: {
+        Row: {
+          created_at: string | null
+          energy_level: number
+          id: string
+          mood_rating: number
+          notes: string | null
+          stress_level: number
+          tags: string[] | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          energy_level: number
+          id?: string
+          mood_rating: number
+          notes?: string | null
+          stress_level: number
+          tags?: string[] | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          energy_level?: number
+          id?: string
+          mood_rating?: number
+          notes?: string | null
+          stress_level?: number
+          tags?: string[] | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      needs_assessments: {
+        Row: {
+          created_at: string | null
+          creative_score: number
+          emotional_score: number
+          id: string
+          intellectual_score: number
+          physical_score: number
+          social_score: number
+          spiritual_score: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          creative_score: number
+          emotional_score: number
+          id?: string
+          intellectual_score: number
+          physical_score: number
+          social_score: number
+          spiritual_score: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          creative_score?: number
+          emotional_score?: number
+          id?: string
+          intellectual_score?: number
+          physical_score?: number
+          social_score?: number
+          spiritual_score?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          email: string | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          email?: string | null
+          first_name?: string | null
+          id: string
+          last_name?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          email?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
+      subscriptions: {
+        Row: {
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          paypal_subscription_id: string | null
+          plan: string
+          started_at: string | null
+          status: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          paypal_subscription_id?: string | null
+          plan: string
+          started_at?: string | null
+          status: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          paypal_subscription_id?: string | null
+          plan?: string
+          started_at?: string | null
+          status?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

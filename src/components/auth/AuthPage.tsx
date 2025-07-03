@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Heart, Eye, EyeOff } from 'lucide-react';
+import { Heart, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { toast } from 'sonner';
 
 const AuthPage = () => {
   const navigate = useNavigate();
@@ -27,15 +28,25 @@ const AuthPage = () => {
 
     try {
       if (isLogin) {
+        console.log('🔑 Attempting sign in...');
         const { error } = await signIn(formData.email, formData.password);
         if (!error) {
+          console.log('✅ Sign in successful, navigating to dashboard');
           navigate('/');
+        } else {
+          console.error('❌ Sign in error:', error);
+          toast.error(error.message || 'Failed to sign in');
         }
       } else {
         if (formData.password !== formData.confirmPassword) {
-          alert('Passwords do not match');
+          toast.error('Passwords do not match');
           return;
         }
+        if (formData.password.length < 6) {
+          toast.error('Password must be at least 6 characters');
+          return;
+        }
+        console.log('📝 Attempting sign up...');
         const { error } = await signUp(
           formData.email,
           formData.password,
@@ -43,11 +54,17 @@ const AuthPage = () => {
           formData.lastName
         );
         if (!error) {
+          console.log('✅ Sign up successful');
+          toast.success('Account created! Please check your email to verify.');
           setIsLogin(true);
+        } else {
+          console.error('❌ Sign up error:', error);
+          toast.error(error.message || 'Failed to create account');
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Auth error:', error);
+      toast.error('Authentication failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -56,13 +73,31 @@ const AuthPage = () => {
   const handleSocialAuth = async (provider: 'google' | 'facebook') => {
     setSocialLoading(provider);
     try {
+      console.log(`🔗 Attempting ${provider} authentication...`);
+      let result;
       if (provider === 'google') {
-        await signInWithGoogle();
+        result = await signInWithGoogle();
       } else if (provider === 'facebook') {
-        await signInWithFacebook();
+        result = await signInWithFacebook();
       }
-    } catch (error) {
+      
+      if (result?.error) {
+        console.error(`❌ ${provider} auth error:`, result.error);
+        if (result.error.message?.includes('provider is not enabled')) {
+          toast.error(`${provider.charAt(0).toUpperCase() + provider.slice(1)} login is not configured yet. Please use email/password for now.`);
+        } else {
+          toast.error(`Failed to sign in with ${provider}`);
+        }
+      }
+    } catch (error: any) {
       console.error(`${provider} auth error:`, error);
+      if (error.message?.includes('Failed to fetch')) {
+        toast.error('Network error. Please check your connection and try again.');
+      } else if (error.message?.includes('provider is not enabled')) {
+        toast.error(`${provider.charAt(0).toUpperCase() + provider.slice(1)} login is not configured yet. Please use email/password for now.`);
+      } else {
+        toast.error(`Failed to sign in with ${provider}`);
+      }
     } finally {
       setSocialLoading('');
     }

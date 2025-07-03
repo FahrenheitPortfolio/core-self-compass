@@ -53,13 +53,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchProfile = async (userId: string) => {
     try {
+      console.log('👤 Fetching profile for user:', userId);
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Profile fetch error:', error);
+        throw error;
+      }
+      
+      console.log('✅ Profile fetched:', data);
       setProfile(data);
     } catch (error) {
       console.error('Error fetching profile:', error);
@@ -68,6 +74,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const fetchSubscription = async (userId: string) => {
     try {
+      console.log('💳 Fetching subscription for user:', userId);
       const { data, error } = await supabase
         .from('subscriptions')
         .select('*')
@@ -76,7 +83,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         .limit(1)
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Subscription fetch error:', error);
+        // Don't throw here, subscription might not exist yet
+        return;
+      }
+      
+      console.log('✅ Subscription fetched:', data);
       setSubscription(data);
     } catch (error) {
       console.error('Error fetching subscription:', error);
@@ -84,6 +97,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
+    console.log('🔄 Setting up auth listener...');
+    
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log(`🔐 Auth event: ${event}`, session?.user?.email || 'No user');
@@ -91,6 +106,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(session?.user ?? null);
         
         if (session?.user) {
+          // Defer data fetching to prevent deadlocks
           setTimeout(() => {
             fetchProfile(session.user.id);
             fetchSubscription(session.user.id);
@@ -103,7 +119,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
     );
 
+    // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('🔍 Initial session check:', session?.user?.email || 'No session');
       setSession(session);
       setUser(session?.user ?? null);
       
@@ -114,107 +132,151 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      console.log('🧹 Cleaning up auth listener');
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signUp = async (email: string, password: string, firstName?: string, lastName?: string) => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: redirectUrl,
-        data: {
-          first_name: firstName,
-          last_name: lastName,
+    try {
+      console.log('📝 Starting signup process for:', email);
+      const redirectUrl = `${window.location.origin}/`;
+      
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          emailRedirectTo: redirectUrl,
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+          },
         },
-      },
-    });
+      });
 
-    if (error) {
-      toast.error(error.message);
-    } else {
-      toast.success('Check your email to confirm your account!');
+      if (error) {
+        console.error('❌ Signup error:', error);
+        return { error };
+      }
+      
+      console.log('✅ Signup successful');
+      return { error: null };
+    } catch (error) {
+      console.error('❌ Signup exception:', error);
+      return { error };
     }
-
-    return { error };
   };
 
   const signIn = async (email: string, password: string) => {
-    console.log('🔑 Attempting sign in for:', email);
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      console.log('🔑 Starting signin process for:', email);
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    if (error) {
-      console.log('❌ Sign in failed:', error.message);
-      toast.error(error.message);
-    } else {
-      console.log('✅ Sign in successful');
+      if (error) {
+        console.error('❌ Signin error:', error);
+        return { error };
+      }
+      
+      console.log('✅ Signin successful');
+      return { error: null };
+    } catch (error) {
+      console.error('❌ Signin exception:', error);
+      return { error };
     }
-
-    return { error };
   };
 
   const signInWithGoogle = async () => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: redirectUrl,
-      },
-    });
+    try {
+      console.log('🔗 Starting Google OAuth...');
+      const redirectUrl = `${window.location.origin}/`;
+      
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: redirectUrl,
+        },
+      });
 
-    if (error) {
-      toast.error(error.message);
+      if (error) {
+        console.error('❌ Google OAuth error:', error);
+        return { error };
+      }
+      
+      console.log('✅ Google OAuth initiated');
+      return { error: null };
+    } catch (error) {
+      console.error('❌ Google OAuth exception:', error);
+      return { error };
     }
-
-    return { error };
   };
 
   const signInWithFacebook = async () => {
-    const redirectUrl = `${window.location.origin}/`;
-    
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'facebook',
-      options: {
-        redirectTo: redirectUrl,
-      },
-    });
+    try {
+      console.log('🔗 Starting Facebook OAuth...');
+      const redirectUrl = `${window.location.origin}/`;
+      
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'facebook',
+        options: {
+          redirectTo: redirectUrl,
+        },
+      });
 
-    if (error) {
-      toast.error(error.message);
+      if (error) {
+        console.error('❌ Facebook OAuth error:', error);
+        return { error };
+      }
+      
+      console.log('✅ Facebook OAuth initiated');
+      return { error: null };
+    } catch (error) {
+      console.error('❌ Facebook OAuth exception:', error);
+      return { error };
     }
-
-    return { error };
   };
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) {
-      toast.error(error.message);
+    try {
+      console.log('🚪 Starting signout...');
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error('❌ Signout error:', error);
+        toast.error(error.message);
+      } else {
+        console.log('✅ Signout successful');
+      }
+    } catch (error) {
+      console.error('❌ Signout exception:', error);
     }
   };
 
   const updateProfile = async (data: Partial<Profile>) => {
     if (!user) return { error: new Error('No user logged in') };
 
-    const { error } = await supabase
-      .from('profiles')
-      .update(data)
-      .eq('id', user.id);
+    try {
+      console.log('📝 Updating profile:', data);
+      const { error } = await supabase
+        .from('profiles')
+        .update(data)
+        .eq('id', user.id);
 
-    if (error) {
-      toast.error('Error updating profile');
-    } else {
+      if (error) {
+        console.error('❌ Profile update error:', error);
+        toast.error('Error updating profile');
+        return { error };
+      }
+      
       await fetchProfile(user.id);
       toast.success('Profile updated successfully');
+      return { error: null };
+    } catch (error) {
+      console.error('❌ Profile update exception:', error);
+      return { error };
     }
-
-    return { error };
   };
 
   const refreshSubscription = async () => {
